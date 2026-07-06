@@ -9,8 +9,6 @@ Core principles:
 This module is intentionally independent from Streamlit.
 You can run it directly in Spyder, VS Code, PyCharm, or terminal.
 
-Author: Douglas Schons
-Project: Engineering-to-Software Portfolio
 """
 
 from __future__ import annotations
@@ -25,7 +23,6 @@ import numpy as np
 # ==========================================================
 # 1. Default scenario for local Spyder testing
 # ==========================================================
-# Edit this section and run this file directly to test the engine.
 
 DEFAULT_N = 10_000
 DEFAULT_DATA_TYPE = "integer"
@@ -77,8 +74,8 @@ def get_algorithm_color(result: Dict) -> str:
 BYTES_PER_ELEMENT = {
     "integer": 8,
     "float": 8,
-    "string": 50,   # rough educational estimate
-    "object": 64,   # rough educational estimate
+    "string": 50,
+    "object": 64,
 }
 
 VALID_DATA_TYPES = ["integer", "float", "string", "object"]
@@ -143,39 +140,66 @@ def cost_n_squared(n: int, k: Optional[int] = None) -> float:
 
 def cost_n_plus_k(n: int, k: Optional[int]) -> float:
     if k is None:
-        raise ValueError("k is required for O(n + k).")
+        return math.nan
     return float(n + k)
 
 
-def estimate_radix_passes(k: Optional[int], radix_base: int = DEFAULT_RADIX_BASE) -> int:
-    """Estimates Radix Sort passes using d = ceil(log_base(k))."""
-    if k is None or k <= 1:
+def estimate_radix_passes(
+    k: Optional[int],
+    radix_base: int = DEFAULT_RADIX_BASE,
+) -> int:
+    if k is None:
         return 1
+
+    if k <= 1:
+        return 1
+
     return max(1, math.ceil(math.log(k, radix_base)))
 
 
-def cost_radix(n: int, k: Optional[int], radix_base: int = DEFAULT_RADIX_BASE) -> float:
-    """Simplified Radix Sort cost model: O(d * n)."""
+def cost_radix(
+    n: int,
+    k: Optional[int],
+    radix_base: int = DEFAULT_RADIX_BASE,
+) -> float:
+    if k is None:
+        return math.nan
+
     passes = estimate_radix_passes(k, radix_base)
     return float(passes * n)
 
 
-def get_complexity_family(algorithm_name: str, data_order: str) -> str:
-    """Returns the effective complexity family for the current scenario."""
+def get_complexity_family(
+    algorithm_name: str,
+    data_order: str,
+) -> str:
     if algorithm_name == "Timsort":
-        return "O(n)" if data_order == "nearly_sorted" else "O(n log n)"
+        if data_order == "nearly_sorted":
+            return "O(n)"
+        return "O(n log n)"
+
     if algorithm_name == "Counting Sort":
         return "O(n + k)"
+
     if algorithm_name == "Radix Sort":
         return "O(d n)"
+
     if algorithm_name == "Merge Sort":
         return "O(n log n)"
+
     if algorithm_name == "Quick Sort":
-        return "O(n²)" if data_order == "reversed" else "O(n log n)"
+        if data_order == "reversed":
+            return "O(n²)"
+        return "O(n log n)"
+
     if algorithm_name == "Heap Sort":
         return "O(n log n)"
+
     if algorithm_name == "Bubble Sort":
-        return "O(n)" if data_order == "nearly_sorted" else "O(n²)"
+        if data_order == "nearly_sorted":
+            return "O(n)"
+        return "O(n²)"
+
     raise ValueError(f"Unknown algorithm: {algorithm_name}")
 
 
@@ -190,7 +214,7 @@ ALGORITHMS = [
         "allowed_types": ["integer", "float", "string", "object"],
         "stable": True,
         "extra_memory_model": "n",
-        "notes": "Python's built-in sorting strategy. Stable and strong for partially ordered data.",
+        "notes": "Python's built-in sorting strategy. Stable and very strong for partially ordered data.",
     },
     {
         "name": "Counting Sort",
@@ -254,21 +278,33 @@ def estimate_theoretical_cost(
     data_order: str,
     radix_base: int = DEFAULT_RADIX_BASE,
 ) -> float:
-    """Returns a simplified theoretical cost value, not runtime in seconds."""
     if algorithm_name == "Timsort":
-        return cost_n(n) if data_order == "nearly_sorted" else cost_n_log_n(n)
+        if data_order == "nearly_sorted":
+            return cost_n(n)
+        return cost_n_log_n(n)
+
     if algorithm_name == "Counting Sort":
         return cost_n_plus_k(n, k)
+
     if algorithm_name == "Radix Sort":
         return cost_radix(n, k, radix_base)
+
     if algorithm_name == "Merge Sort":
         return cost_n_log_n(n)
+
     if algorithm_name == "Quick Sort":
-        return cost_n_squared(n) if data_order == "reversed" else cost_n_log_n(n)
+        if data_order == "reversed":
+            return cost_n_squared(n)
+        return cost_n_log_n(n)
+
     if algorithm_name == "Heap Sort":
         return cost_n_log_n(n)
+
     if algorithm_name == "Bubble Sort":
-        return cost_n(n) if data_order == "nearly_sorted" else cost_n_squared(n)
+        if data_order == "nearly_sorted":
+            return cost_n(n)
+        return cost_n_squared(n)
+
     raise ValueError(f"Unknown algorithm: {algorithm_name}")
 
 
@@ -276,18 +312,28 @@ def estimate_theoretical_cost(
 # 7. Memory model
 # ==========================================================
 
-def estimate_extra_memory_bytes(algorithm: Dict, n: int, k: Optional[int], data_type: str) -> float:
+def estimate_extra_memory_bytes(
+    algorithm: Dict,
+    n: int,
+    k: Optional[int],
+    data_type: str,
+) -> float:
     element_size = BYTES_PER_ELEMENT[data_type]
     model = algorithm["extra_memory_model"]
 
     if model == "constant":
         return 0.0
+
     if model == "log_n":
         return float(int(math.log2(max(n, 2))) * element_size)
+
     if model == "n":
         return float(n * element_size)
+
     if model == "k":
-        return 0.0 if k is None else float(k * element_size)
+        if k is None:
+            return 0.0
+        return float(k * element_size)
 
     raise ValueError(f"Unknown memory model: {model}")
 
@@ -312,24 +358,31 @@ def check_algorithm_compatibility(
         )
 
     if data_type not in algorithm["allowed_types"]:
-        rejection_reasons.append(f"Data type '{data_type}' is not supported by {algorithm['name']}.")
+        rejection_reasons.append(
+            f"Data type '{data_type}' is not supported by {algorithm['name']}."
+        )
 
     if requires_stability and not algorithm["stable"]:
-        rejection_reasons.append("Stable sorting is required, but this algorithm is not stable.")
+        rejection_reasons.append(
+            "Stable sorting is required, but this algorithm is not stable."
+        )
 
     if algorithm["name"] == "Counting Sort":
         if data_type != "integer":
             rejection_reasons.append("Counting Sort requires integer data.")
+
         if k is None:
             rejection_reasons.append("Counting Sort requires a known integer range k.")
+
         if k is not None and k > 10 * n:
             rejection_reasons.append(
                 "Integer range k is too large compared with n. "
                 "Counting Sort loses efficiency and memory advantage."
             )
 
-    if algorithm["name"] == "Radix Sort" and data_type != "integer":
-        rejection_reasons.append("Radix Sort requires integer data.")
+    if algorithm["name"] == "Radix Sort":
+        if data_type != "integer":
+            rejection_reasons.append("Radix Sort requires integer data.")
 
     data_memory = estimate_data_memory_bytes(n, data_type)
     extra_memory = estimate_extra_memory_bytes(algorithm, n, k, data_type)
@@ -355,18 +408,26 @@ def evaluate_algorithms(
     available_ram_gb: float,
     radix_base: int = DEFAULT_RADIX_BASE,
 ) -> Tuple[List[Dict], Optional[Dict]]:
-    validate_inputs(n, data_type, data_order, k, available_ram_gb)
+    validate_inputs(
+        n=n,
+        data_type=data_type,
+        data_order=data_order,
+        integer_range_k=k,
+        available_ram_gb=available_ram_gb,
+    )
 
     results = []
 
     for algorithm in ALGORITHMS:
-        rejection_reasons, data_memory, extra_memory, total_memory = check_algorithm_compatibility(
-            algorithm=algorithm,
-            n=n,
-            data_type=data_type,
-            k=k,
-            requires_stability=requires_stability,
-            available_ram_gb=available_ram_gb,
+        rejection_reasons, data_memory, extra_memory, total_memory = (
+            check_algorithm_compatibility(
+                algorithm=algorithm,
+                n=n,
+                data_type=data_type,
+                k=k,
+                requires_stability=requires_stability,
+                available_ram_gb=available_ram_gb,
+            )
         )
 
         theoretical_cost = estimate_theoretical_cost(
@@ -377,9 +438,12 @@ def evaluate_algorithms(
             radix_base=radix_base,
         )
 
-        complexity_family = get_complexity_family(algorithm["name"], data_order)
+        complexity_family = get_complexity_family(
+            algorithm_name=algorithm["name"],
+            data_order=data_order,
+        )
 
-        results.append({
+        result = {
             "name": algorithm["name"],
             "category": algorithm["category"],
             "compatible": len(rejection_reasons) == 0,
@@ -391,12 +455,19 @@ def evaluate_algorithms(
             "extra_memory_mb": bytes_to_mb(extra_memory),
             "total_memory_mb": bytes_to_mb(total_memory),
             "notes": algorithm["notes"],
-        })
+        }
 
-    compatible_results = [result for result in results if result["compatible"]]
+        results.append(result)
+
+    compatible_results = [
+        result for result in results
+        if result["compatible"] and not math.isnan(result["theoretical_cost"])
+    ]
+
     compatible_results.sort(key=lambda item: item["theoretical_cost"])
 
     recommendation = compatible_results[0] if compatible_results else None
+
     return results, recommendation
 
 
@@ -404,7 +475,12 @@ def evaluate_algorithms(
 # 10. Explanations and report
 # ==========================================================
 
-def get_decision_flow_lines(n: int, data_type: str, data_order: str, recommendation: Optional[Dict]) -> List[str]:
+def get_decision_flow_lines(
+    n: int,
+    data_type: str,
+    data_order: str,
+    recommendation: Optional[Dict],
+) -> List[str]:
     lines = [
         "[Start]",
         "  ↓",
@@ -425,22 +501,40 @@ def get_decision_flow_lines(n: int, data_type: str, data_order: str, recommendat
         "[Rank compatible algorithms by theoretical cost]",
         "  ↓",
     ]
-    lines.append("[No compatible algorithm found]" if recommendation is None else f"[Recommend: {recommendation['name']}]")
+
+    if recommendation is None:
+        lines.append("[No compatible algorithm found]")
+    else:
+        lines.append(f"[Recommend: {recommendation['name']}]")
+
     return lines
 
 
-def explain_recommendation(recommendation: Optional[Dict], results: List[Dict]) -> str:
+def explain_recommendation(
+    recommendation: Optional[Dict],
+    results: List[Dict],
+) -> str:
     if recommendation is None:
-        return "No compatible practical algorithm was found for this scenario. Relax one or more constraints and try again."
+        return (
+            "No compatible practical algorithm was found for this scenario. "
+            "Relax one or more constraints and try again."
+        )
 
     compatible_not_chosen = [
         result for result in results
-        if result["compatible"] and result["name"] != recommendation["name"]
+        if result["compatible"]
+        and result["name"] != recommendation["name"]
+        and not math.isnan(result["theoretical_cost"])
     ]
-    rejected = [result for result in results if not result["compatible"]]
+
+    rejected = [
+        result for result in results
+        if not result["compatible"]
+    ]
 
     explanation = [
-        f"{recommendation['name']} was recommended because it has the lowest theoretical cost among the compatible practical algorithms.",
+        f"{recommendation['name']} was recommended because it has the lowest "
+        "theoretical cost among the compatible practical algorithms.",
         "",
         f"Estimated cost: {recommendation['theoretical_cost']:.2f}",
         f"Effective complexity family: {recommendation['complexity_family']}",
@@ -450,7 +544,10 @@ def explain_recommendation(recommendation: Optional[Dict], results: List[Dict]) 
         explanation.append("")
         explanation.append("Compatible alternatives were available, but their estimated costs were higher:")
         for result in sorted(compatible_not_chosen, key=lambda item: item["theoretical_cost"]):
-            explanation.append(f"- {result['name']}: {result['theoretical_cost']:.2f} ({result['complexity_family']})")
+            explanation.append(
+                f"- {result['name']}: {result['theoretical_cost']:.2f} "
+                f"({result['complexity_family']})"
+            )
 
     if rejected:
         explanation.append("")
@@ -463,8 +560,9 @@ def explain_recommendation(recommendation: Optional[Dict], results: List[Dict]) 
 
 
 def build_results_table(results: List[Dict]) -> List[Dict]:
-    return [
-        {
+    rows = []
+    for result in results:
+        rows.append({
             "Algorithm": result["name"],
             "Category": result["category"],
             "Status": "Compatible" if result["compatible"] else "Rejected",
@@ -476,9 +574,8 @@ def build_results_table(results: List[Dict]) -> List[Dict]:
             "Total memory (MB)": result["total_memory_mb"],
             "Notes": result["notes"],
             "Rejection reasons": "; ".join(result["rejection_reasons"]),
-        }
-        for result in results
-    ]
+        })
+    return rows
 
 
 def print_console_report(
@@ -498,7 +595,10 @@ def print_console_report(
 
     print("\nCore principles:")
     print("1. Best algorithm = lowest cost among compatible algorithms.")
-    print("2. This tool does not sort the data; it explains which sorting strategy makes the most sense for the described scenario.")
+    print(
+        "2. This tool does not sort the data; it explains which sorting "
+        "strategy makes the most sense for the described scenario."
+    )
 
     print("\nInput scenario:")
     print(f"- Number of elements n: {n}")
@@ -517,25 +617,41 @@ def print_console_report(
         print(line)
 
     print("\nAlgorithm evaluation:")
-    sorted_results = sorted(results, key=lambda item: (not item["compatible"], item["theoretical_cost"]))
+
+    sorted_results = sorted(
+        results,
+        key=lambda item: (
+            not item["compatible"],
+            item["theoretical_cost"] if not math.isnan(item["theoretical_cost"]) else float("inf"),
+        )
+    )
+
     for result in sorted_results:
+        cost_text = (
+            f"{result['theoretical_cost']:.2f}"
+            if not math.isnan(result["theoretical_cost"])
+            else "Not applicable"
+        )
+
         print("\n" + "-" * 78)
         print(f"Algorithm: {result['name']}")
         print(f"Category: {result['category']}")
         print(f"Effective complexity family: {result['complexity_family']}")
         print(f"Stable: {result['stable']}")
         print(f"Status: {'COMPATIBLE' if result['compatible'] else 'REJECTED'}")
-        print(f"Theoretical cost at n={n}: {result['theoretical_cost']:.2f}")
+        print(f"Theoretical cost at n={n}: {cost_text}")
         print(f"Data memory: {result['data_memory_mb']:.4f} MB")
         print(f"Extra memory: {result['extra_memory_mb']:.4f} MB")
         print(f"Total estimated memory: {result['total_memory_mb']:.4f} MB")
         print(f"Notes: {result['notes']}")
+
         if result["rejection_reasons"]:
             print("Rejection reasons:")
             for reason in result["rejection_reasons"]:
                 print(f"- {reason}")
 
     print("\n" + "=" * 78)
+
     if recommendation is None:
         print("Final recommendation: no compatible practical algorithm found.")
     else:
@@ -544,6 +660,7 @@ def print_console_report(
         print("- Criterion: lowest theoretical cost among compatible practical algorithms.")
         print(f"- Estimated theoretical cost: {recommendation['theoretical_cost']:.2f}")
         print(f"- Effective complexity family: {recommendation['complexity_family']}")
+
     print("=" * 78)
 
 
@@ -551,17 +668,43 @@ def print_console_report(
 # 11. Complexity curves and plots
 # ==========================================================
 
-def get_curve_values(x_values: np.ndarray, k: Optional[int], radix_base: int = DEFAULT_RADIX_BASE) -> Dict[str, Dict]:
-    if k is None:
-        k = 0
-    radix_passes = estimate_radix_passes(k, radix_base)
-    return {
-        "O(n)": {"y": x_values, "label": "O(n)", "color": CURVE_COLORS["O(n)"]},
-        "O(n log n)": {"y": x_values * np.log2(x_values), "label": "O(n log n)", "color": CURVE_COLORS["O(n log n)"]},
-        "O(n²)": {"y": x_values**2, "label": "O(n²)", "color": CURVE_COLORS["O(n²)"]},
-        "O(n + k)": {"y": x_values + k, "label": "O(n + k)", "color": CURVE_COLORS["O(n + k)"]},
-        "O(d n)": {"y": radix_passes * x_values, "label": f"O(d n), d={radix_passes}", "color": CURVE_COLORS["O(d n)"]},
+def get_curve_values(
+    x_values: np.ndarray,
+    k: Optional[int],
+    radix_base: int = DEFAULT_RADIX_BASE,
+) -> Dict[str, Dict]:
+    curves = {
+        "O(n)": {
+            "y": x_values,
+            "label": "O(n)",
+            "color": CURVE_COLORS["O(n)"],
+        },
+        "O(n log n)": {
+            "y": x_values * np.log2(x_values),
+            "label": "O(n log n)",
+            "color": CURVE_COLORS["O(n log n)"],
+        },
+        "O(n²)": {
+            "y": x_values**2,
+            "label": "O(n²)",
+            "color": CURVE_COLORS["O(n²)"],
+        },
     }
+
+    if k is not None:
+        radix_passes = estimate_radix_passes(k, radix_base)
+        curves["O(n + k)"] = {
+            "y": x_values + k,
+            "label": "O(n + k)",
+            "color": CURVE_COLORS["O(n + k)"],
+        }
+        curves["O(d n)"] = {
+            "y": radix_passes * x_values,
+            "label": f"O(d n), d={radix_passes}",
+            "color": CURVE_COLORS["O(d n)"],
+        }
+
+    return curves
 
 
 def create_global_complexity_figure(
@@ -572,36 +715,103 @@ def create_global_complexity_figure(
     show_educational_algorithms: bool = DEFAULT_SHOW_EDUCATIONAL_ALGORITHMS,
     radix_base: int = DEFAULT_RADIX_BASE,
 ):
+    """
+    Global scenario view.
+
+    This graph plots only complexity families that are actually represented by
+    evaluated algorithm points in the current scenario. This prevents a curve
+    from appearing without any associated algorithm point.
+    """
     x_max = max(10, int(n * 1.2))
     x_values = np.linspace(1, x_max, 500)
     curves = get_curve_values(x_values, k, radix_base)
-    fig, ax = plt.subplots(figsize=(12, 7))
 
-    for _, curve_data in curves.items():
-        ax.plot(x_values, curve_data["y"], label=curve_data["label"], color=curve_data["color"])
-
+    plotted_results = []
     for result in results:
+        if math.isnan(result["theoretical_cost"]):
+            continue
+
         if result["category"] == "educational" and not show_educational_algorithms:
             continue
+
+        if result["complexity_family"] not in curves:
+            continue
+
+        plotted_results.append(result)
+
+    families_to_plot = sorted({
+        result["complexity_family"]
+        for result in plotted_results
+    })
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    for family in families_to_plot:
+        curve_data = curves[family]
+        ax.plot(
+            x_values,
+            curve_data["y"],
+            label=curve_data["label"],
+            color=curve_data["color"],
+        )
+
+    for result in plotted_results:
         color = get_algorithm_color(result)
         marker = get_algorithm_marker(result["name"])
         y = result["theoretical_cost"]
+
         if result["compatible"]:
-            ax.scatter(n, y, s=90, color=color, edgecolors="black", linewidths=1.2, marker=marker, label=f"{result['name']} point", zorder=5)
+            ax.scatter(
+                n,
+                y,
+                s=90,
+                color=color,
+                edgecolors="black",
+                linewidths=1.2,
+                marker=marker,
+                label=f"{result['name']} point",
+                zorder=5,
+            )
         else:
-            ax.scatter(n, y, s=80, color=color, marker="x", linewidths=2, label=f"{result['name']} rejected", zorder=5)
+            ax.scatter(
+                n,
+                y,
+                s=80,
+                color=color,
+                marker="x",
+                linewidths=2,
+                label=f"{result['name']} rejected",
+                zorder=5,
+            )
 
     if recommendation is not None:
-        ax.scatter(n, recommendation["theoretical_cost"], s=260, marker="o", linewidths=2.5, facecolors="none", edgecolors="black", label=f"Recommendation: {recommendation['name']}", zorder=6)
+        ax.scatter(
+            n,
+            recommendation["theoretical_cost"],
+            s=260,
+            marker="o",
+            linewidths=2.5,
+            facecolors="none",
+            edgecolors="black",
+            label=f"Recommendation: {recommendation['name']}",
+            zorder=6,
+        )
 
-    ax.axvline(x=n, linestyle="--", linewidth=1, label=f"Input size n = {n}")
-    ax.set_title("Global View - Theoretical Complexity Curves")
+    ax.axvline(
+        x=n,
+        linestyle="--",
+        linewidth=1,
+        label=f"Input size n = {n}",
+    )
+
+    ax.set_title("Global View - Scenario Complexity Curves")
     ax.set_xlabel("Number of elements (n)")
     ax.set_ylabel("Estimated theoretical cost f(n)")
     ax.set_yscale("log")
     ax.grid(True, which="both", linestyle="--", linewidth=0.5)
     ax.legend(fontsize=8)
     fig.tight_layout()
+
     return fig
 
 
@@ -616,38 +826,67 @@ def get_auto_y_limits_for_relevant_points(
 
     reference_cost = recommendation["theoretical_cost"]
     max_allowed_cost = reference_cost * max_cost_ratio
+
     relevant_results = []
     omitted_results = []
 
     for result in results:
+        if math.isnan(result["theoretical_cost"]):
+            omitted_results.append(result)
+            continue
+
         if result["category"] == "educational":
             omitted_results.append(result)
             continue
+
         cost = result["theoretical_cost"]
+
         if cost <= max_allowed_cost:
             relevant_results.append(result)
         else:
             omitted_results.append(result)
 
     y_values = [result["theoretical_cost"] for result in relevant_results]
+
     if not y_values:
         return None, None, omitted_results
 
     y_min = min(y_values)
     y_max = max(y_values)
-    padding = max(1.0, y_min * margin_ratio) if y_min == y_max else (y_max - y_min) * margin_ratio
-    return max(0.0, y_min - padding), y_max + padding, omitted_results
+
+    if y_min == y_max:
+        padding = max(1.0, y_min * margin_ratio)
+    else:
+        padding = (y_max - y_min) * margin_ratio
+
+    y_lower = max(0.0, y_min - padding)
+    y_upper = y_max + padding
+
+    return y_lower, y_upper, omitted_results
 
 
-def get_visible_results_for_zoom(results: List[Dict], y_lower: Optional[float], y_upper: Optional[float]) -> List[Dict]:
+def get_visible_results_for_zoom(
+    results: List[Dict],
+    y_lower: Optional[float],
+    y_upper: Optional[float],
+) -> List[Dict]:
     visible_results = []
+
     for result in results:
+        if math.isnan(result["theoretical_cost"]):
+            continue
+
         if result["category"] == "educational":
             continue
+
         y = result["theoretical_cost"]
-        if y_lower is not None and y_upper is not None and (y < y_lower or y > y_upper):
-            continue
+
+        if y_lower is not None and y_upper is not None:
+            if y < y_lower or y > y_upper:
+                continue
+
         visible_results.append(result)
+
     return visible_results
 
 
@@ -665,37 +904,95 @@ def create_zoom_complexity_figure(
     x_values = np.linspace(x_min, x_max, 500)
     curves = get_curve_values(x_values, k, radix_base)
 
-    y_lower, y_upper, omitted_results = get_auto_y_limits_for_relevant_points(results, recommendation, max_cost_ratio, margin_ratio=0.15)
+    y_lower, y_upper, omitted_results = get_auto_y_limits_for_relevant_points(
+        results=results,
+        recommendation=recommendation,
+        max_cost_ratio=max_cost_ratio,
+        margin_ratio=0.15,
+    )
+
     visible_results = get_visible_results_for_zoom(results, y_lower, y_upper)
-    families_to_plot = sorted({result["complexity_family"] for result in visible_results})
+
+    families_to_plot = sorted({
+        result["complexity_family"]
+        for result in visible_results
+        if result["complexity_family"] in curves
+    })
 
     fig, ax = plt.subplots(figsize=(12, 7))
 
     for family in families_to_plot:
         curve_data = curves[family]
-        ax.plot(x_values, curve_data["y"], label=curve_data["label"], color=curve_data["color"])
+        ax.plot(
+            x_values,
+            curve_data["y"],
+            label=curve_data["label"],
+            color=curve_data["color"],
+        )
 
     for result in visible_results:
+        if result["complexity_family"] not in curves:
+            continue
+
         color = get_algorithm_color(result)
         marker = get_algorithm_marker(result["name"])
+
         if result["compatible"]:
-            ax.scatter(n, result["theoretical_cost"], s=110, color=color, edgecolors="black", linewidths=1.2, marker=marker, label=f"{result['name']} point", zorder=5)
+            ax.scatter(
+                n,
+                result["theoretical_cost"],
+                s=110,
+                color=color,
+                edgecolors="black",
+                linewidths=1.2,
+                marker=marker,
+                label=f"{result['name']} point",
+                zorder=5,
+            )
         else:
-            ax.scatter(n, result["theoretical_cost"], s=90, color=color, marker="x", linewidths=2, label=f"{result['name']} rejected", zorder=5)
+            ax.scatter(
+                n,
+                result["theoretical_cost"],
+                s=90,
+                color=color,
+                marker="x",
+                linewidths=2,
+                label=f"{result['name']} rejected",
+                zorder=5,
+            )
 
     if recommendation is not None:
-        ax.scatter(n, recommendation["theoretical_cost"], s=290, marker="o", linewidths=2.5, facecolors="none", edgecolors="black", label=f"Recommendation: {recommendation['name']}", zorder=6)
+        ax.scatter(
+            n,
+            recommendation["theoretical_cost"],
+            s=290,
+            marker="o",
+            linewidths=2.5,
+            facecolors="none",
+            edgecolors="black",
+            label=f"Recommendation: {recommendation['name']}",
+            zorder=6,
+        )
 
-    ax.axvline(x=n, linestyle="--", linewidth=1, label=f"Input size n = {n}")
+    ax.axvline(
+        x=n,
+        linestyle="--",
+        linewidth=1,
+        label=f"Input size n = {n}",
+    )
+
     ax.set_title(f"Auto Zoom View - Relevant Complexity Region Around n = {n}")
     ax.set_xlabel("Number of elements (n)")
     ax.set_ylabel("Estimated theoretical cost f(n)")
     ax.set_xlim(x_min, x_max)
+
     if y_lower is not None and y_upper is not None:
         ax.set_ylim(y_lower, y_upper)
+
     ax.grid(True, linestyle="--", linewidth=0.5)
     ax.legend(fontsize=8)
     fig.tight_layout()
+
     return fig, omitted_results
 
 
@@ -726,13 +1023,38 @@ def run_demo() -> None:
         radix_base=DEFAULT_RADIX_BASE,
     )
 
-    create_global_complexity_figure(DEFAULT_N, DEFAULT_INTEGER_RANGE_K, results, recommendation)
-    _, omitted_results = create_zoom_complexity_figure(DEFAULT_N, DEFAULT_INTEGER_RANGE_K, results, recommendation)
+    create_global_complexity_figure(
+        n=DEFAULT_N,
+        k=DEFAULT_INTEGER_RANGE_K,
+        results=results,
+        recommendation=recommendation,
+        show_educational_algorithms=DEFAULT_SHOW_EDUCATIONAL_ALGORITHMS,
+        radix_base=DEFAULT_RADIX_BASE,
+    )
+
+    _, omitted_results = create_zoom_complexity_figure(
+        n=DEFAULT_N,
+        k=DEFAULT_INTEGER_RANGE_K,
+        results=results,
+        recommendation=recommendation,
+        delta=DEFAULT_ZOOM_DELTA,
+        max_cost_ratio=DEFAULT_MAX_COST_RATIO_FOR_ZOOM,
+        radix_base=DEFAULT_RADIX_BASE,
+    )
 
     if omitted_results:
         print("\nAlgorithms omitted from zoom view due to scale:")
         for result in omitted_results:
-            print(f"- {result['name']}: cost = {result['theoretical_cost']:.2f}, family = {result['complexity_family']}")
+            cost_text = (
+                f"{result['theoretical_cost']:.2f}"
+                if not math.isnan(result["theoretical_cost"])
+                else "Not applicable"
+            )
+            print(
+                f"- {result['name']}: "
+                f"cost = {cost_text}, "
+                f"family = {result['complexity_family']}"
+            )
 
     plt.show()
 
